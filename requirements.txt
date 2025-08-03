@@ -5,5 +5,3 @@ numpy
 plotly
 python-dateutil
 python-dotenv
-runpy
-streamlit-pills
