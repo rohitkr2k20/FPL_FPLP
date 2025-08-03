@@ -1,0 +1,13 @@
+streamlit 
+boto3
+time
+io
+pandas
+numpy
+plotly
+dateutil
+runpy
+streamlit_pills 
+calendar
+dotenv 
+os

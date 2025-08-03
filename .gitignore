@@ -1,0 +1,17 @@
+# 🔒 Secrets
+.env
+
+# 🧠 Python Cache
+__pycache__/
+*.py[cod]
+
+# ⚙️ IDE Config Files
+.vscode/
+.idea/
+
+# 🚫 System Files (macOS/Windows)
+.DS_Store
+Thumbs.db
+
+# 📦 Package files (optional, if present)
+*.egg-info/
