@@ -43,7 +43,6 @@ session = boto3.Session(
     region_name=aws_region
 )
 
-@st.cache_data
 def load_data(query):
     try:
         start_time = time.time()
@@ -1748,5 +1747,6 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
 
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
