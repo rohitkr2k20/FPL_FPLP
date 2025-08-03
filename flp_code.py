@@ -27,7 +27,7 @@ st.set_page_config(page_title="FPL-Active", layout="wide")
 ################################## ----- Setting up the Database Connection ----- ############################################
 ##############################################################################################################################
 # Load the .env file
-load_dotenv()  # Replace with your filename if different
+load_dotenv(".env")  # Replace with your filename if different
 
 # Get credentials from env
 aws_region = os.getenv("aws_region")
@@ -1747,6 +1747,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
 
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
