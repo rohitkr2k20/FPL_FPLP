@@ -201,7 +201,7 @@ left join next_loan_cte nlc on nlc.loan_id = a.loan_id
 group by 1,2,3,4,5,6,7,8,9,10,11,12 ;
 """
 df=load_data(query_FPL)
-
+print("data loaded successfully")
 # print(df)
 # df contains the last 3 months data of df_active
 # df_active : active df ( closed_date is either empty or is the current month )
@@ -1748,3 +1748,4 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
 
         st.plotly_chart(fig4, use_container_width=True)
+
