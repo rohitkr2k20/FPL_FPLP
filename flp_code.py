@@ -10,34 +10,19 @@ import plotly.graph_objects as go
 import plotly.express as px
 from dateutil.relativedelta import relativedelta
 import runpy
-import streamlit as st
-
 from dotenv import load_dotenv
 import os
-import boto3
 
-# ✅ Load .env
-load_dotenv()
 
-# ✅ Get environment variables
-aws_region = os.getenv("aws_region")
-aws_access_key = os.getenv("aws_access_key")
-aws_secret_key = os.getenv("secret_key")
-aws_session_token = os.getenv("aws_session_token")
-print(aws_region)
-print(aws_access_key)
-print(aws_secret_key)
-print(aws_session_token)
-
-# ✅ Optional debug check
-print("Loaded AWS region:", aws_region)
+# ✅ Access from secrets
+aws_config = st.secrets["aws"]
 
 # ✅ Create boto3 session
 session = boto3.Session(
-aws_access_key_id=aws_access_key,
-aws_secret_access_key=aws_secret_key,
-aws_session_token=aws_session_token,
-region_name=aws_region
+    aws_access_key_id=aws_config["aws_access_key_id"],
+    aws_secret_access_key=aws_config["aws_secret_access_key"],
+    aws_session_token=aws_config["aws_session_token"],
+    region_name=aws_config["region_name"]
 )
 
 # ---------- PAGE CONFIG ----------
@@ -1754,6 +1739,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
