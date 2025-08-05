@@ -11,8 +11,7 @@ import plotly.express as px
 from dateutil.relativedelta import relativedelta
 import runpy
 import streamlit as st
-from dotenv import load_dotenv
-import os
+
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(page_title="FPL-Active", layout="wide")
@@ -26,31 +25,15 @@ st.set_page_config(page_title="FPL-Active", layout="wide")
 ##############################################################################################################################
 ################################## ----- Setting up the Database Connection ----- ############################################
 ##############################################################################################################################
-# Load the .env file
-load_dotenv(".env")  # Replace with your filename if different
-
-# Get credentials from env
-aws_region = os.getenv("aws_region")
-aws_access_key = os.getenv("access_key")
-aws_secret_key = os.getenv("secret_key")
-aws_session_token = os.getenv("aws_session_token")
-
-# Initialize boto3 session
-session = boto3.Session(
-    aws_access_key_id=aws_access_key,
-    aws_secret_access_key=aws_secret_key,
-    aws_session_token=aws_session_token,
-    region_name=aws_region
-)
-
+@st.cache_data
 def load_data(query):
     try:
         start_time = time.time()
         # Create an Athena client
         athena_client = boto3.client(
             "athena",
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
             region_name=aws_region,
             aws_session_token=aws_session_token
         )
@@ -90,8 +73,8 @@ def load_data(query):
         # Fetch the result from S3 once the query is finished
         s3_client = boto3.client(
             "s3",
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
             region_name=aws_region,
             aws_session_token=aws_session_token
         )
@@ -111,18 +94,18 @@ def load_data(query):
             my_data = pd.DataFrame()
             print("SQL fetch size = 0")
         # Print elapsed time
-        end_time = time.time() - start_time
-        print(f"Elapsed time: {end_time / 60} minutes")
-        print("Time has elapsed for the time being")
+        end_time = time.time() - start_time 
+        print(f"Elapsed time: {end_time / 60} minutes") 
+        print("Time has elapsed for the time being") 
         print("Data fetched from athena, waiting for it to get into the wordpress")
         print("")
         print("The end time is ",end_time)
-        print("The total elapsed time is ",end_time+1)
+        print("The total elapsed time is ",end_time+1) 
         return my_data
     except Exception as e:
         print(f"Error: {e}")
         return pd.DataFrame()  # Return an empty DataFrame in case of error
-   
+    
 
 #############################################################################################################################
 ################################################ INPUTS REQUIRED ############################################################
@@ -130,55 +113,54 @@ def load_data(query):
 
 ongoing_month="2025-08"
 last_month="2025-07"
-om_actual_days= list(range(1,31)) # 1 more than the count of days in current month
-om_days=list(range(1,5)) # 1 MORE THAN THE COUNT OF DAYS IN THE CURRENT MONTH
-lm_days = list(range(1,32)) # 1 MORE THAN THE COUNT OF DAYS IN THE LAST MONTH
-om_name = "Aug-25"
 lm_name = "July-25"
+om_name = "Aug-25"
+om_days=list(range(1,5)) # 1 MORE THAN THE TILL DATE 
+om_actual_days= list(range(1,31))
+lm_days = list(range(1,32)) # 1 MORE THAN THE COUNT OF DAYS IN THE LAST MONTH 
 
 
 ###########################################################################################################################
 ############################ ----- Query to get the last 3 month's data ( Inc current month ) ----- #######################
 ###########################################################################################################################
 
-#DateField inside the query
-query_FPL = """
-with base_emi as
+print("query is getting started !!! ")
+#DateField inside the query 
+query_FPL = f"""
+with base_emi as 
 (select userid,
 loan_id,
 product_name,
 loan_number,
 date_format(disbursed_date,'%Y-%m-%d') as disb_date,
-date_format(disbursed_date,'%Y-%m') as disb_month,
-date_format(emi_due_date,'%Y-%m') as due_month,
+date_format(disbursed_date,'%Y-%m') as disb_month, 
+date_format(emi_due_date,'%Y-%m') as due_month, 
 date_format(emi_due_date,'%Y-%m-%d') as due_date,
 date_format(closedon,'%Y-%m') as closed_month,
-date_format(closedon,'%Y-%m-%d') as closed_date,
+date_format(closedon,'%Y-%m-%d') as closed_date, 
 producttenure,
 installment_number,
 rank() over(partition by loan_id order by installment_id desc) as installment_remaining
-from kreditbee_bi_dw_iceberg.yp_emi_data_tbl a
-where
--- date_format(disbursed_date,'%Y-%m') = '2024-11'
-date_format(emi_due_date,'%Y-%m') IN ('2025-07','2025-06')  
+from kreditbee_bi_dw_iceberg.yp_emi_data_tbl a 
+where 
+date_format(emi_due_date,'%Y-%m') IN ('{ongoing_month}','{last_month}')  
 and product_name in ('MLA-10K','MLA-10K-INACTIVE','MLA-10K-R','MLA-5K','MLA-5K-R','MLA-8K','MLA-8K-R'))
 ,
 state_cte as(select * from (
-select be.loan_id, state, changedon, rank() over(partition by be.userid,be.loan_id order by b.id desc) as state_rnk
-from base_emi be  join yp_iceberg.yp_user_state b on be.userid = b.uid
+select be.loan_id, state, changedon, rank() over(partition by be.userid,be.loan_id order by b.id desc) as state_rnk 
+from base_emi be  join yp_iceberg.yp_user_state b on be.userid = b.uid 
 where date_format(b.changedon,'%Y-%m-%d') <= DATE_FORMAT(DATE_ADD('day', 1, date(closed_date)), '%Y-%m-%d')
 ) where state_rnk = 1
-group by 1,2,3,4)
+group by 1,2,3,4) 
 ,
 ug_cte as (
 select * from (
-select be.loan_id,oldband,oldsubband, newband, newsubband, changedon, rank() over(partition by be.userid,be.loan_id order by b.id desc) as band_rnk
-from base_emi be  join yp_iceberg.yp_log_user_band_change b on be.userid = b.uid
+select be.loan_id,oldband,oldsubband, newband, newsubband, changedon, rank() over(partition by be.userid,be.loan_id order by b.id desc) as band_rnk 
+from base_emi be  join yp_iceberg.yp_log_user_band_change b on be.userid = b.uid 
 where date_format(b.changedon,'%Y-%m-%d') <= DATE_FORMAT(DATE_ADD('day', 1, date(closed_date)), '%Y-%m-%d')
 and date_format(b.changedon,'%Y-%m-%d') >disb_date
 ) where band_rnk = 1
 group by 1,2,3,4,5,6,7),
--- select date_diff('day',date('2024-03-03'),date('2000-03-03'))
 next_loan_cte as(select * from (
 select l.userid,
 be.loan_id,
@@ -188,7 +170,7 @@ date_format(l.disbursedoN,'%Y-%m-%d') as disb_next_date,
 date_format(l.disbursedoN,'%Y-%m') as disb_next_month,
 date_diff('day',date(be.closed_date),date(date_format(l.disbursedoN,'%Y-%m-%d'))) as disb_gap_closed,
 principaldue,
-rank() over(partition by be.userid,be.loan_id order by l.id) as lrnk
+rank() over(partition by be.userid,be.loan_id order by l.id) as lrnk 
 from yp_iceberg.yp_loan l join base_emi be on l.userid = be.userid and l.id > be.loan_id
 where l.state in (47,71)
 ) where lrnk = 1
@@ -197,19 +179,19 @@ select due_month,due_date,closed_date,disb_next_date,disb_next_month,closed_mont
 count(distinct a.loan_id) as cnt_loans from base_emi a left join state_cte sc on sc.loan_id = a.loan_id
 left join ug_cte uc on uc.loan_id = a.loan_id
 left join next_loan_cte nlc on nlc.loan_id = a.loan_id
-group by 1,2,3,4,5,6,7,8,9,10,11,12 ;
+group by 1,2,3,4,5,6,7,8,9,10,11,12 ; 
 """
 df=load_data(query_FPL)
-print("data loaded successfully")
-# print(df)
+
+print(df)
 # df contains the last 3 months data of df_active
 # df_active : active df ( closed_date is either empty or is the current month )
-# df_inactive : Inactice df ( closed date is prev month or before )
+# df_inactive : Inactice df ( closed date is prev month or before ) 
 
 current_month = pd.Period(ongoing_month, freq='M')
 # Current and previous month
 pd.Period(ongoing_month, freq='M')
-previous_month = current_month - 1 # dynamic
+previous_month = current_month - 1 # dynamic 
 
 df['closed_month'] = pd.to_datetime(df['closed_month'], errors='coerce').dt.to_period('M')
 
@@ -290,7 +272,7 @@ df_active_may['conf_product'] = np.where(
     df_active_may['newband'].map(band_map)
 )
 
-# Filter for current and previous month
+# Filter for current and previous month 
 df_june = df_active_june[df_active_june['due_month'] == current_month].copy()
 df_may = df_active_may[df_active_may['due_month'] == previous_month].copy()
 
@@ -310,8 +292,8 @@ def is_upgrade(row):
     # Assign priority rank to bands
     band_order = {2250: 1, 1070: 2, 4341: 3,1071: 4, 4425: 5, 1072: 6, 4457: 7}
     curr_band_id = product_to_band.get(row['product_name'], 0)
-    curr_rank = band_order.get(curr_band_id, 0)
-    new_rank = band_order.get(row['newband'], 0)
+    curr_rank = band_order.get(curr_band_id, 0) 
+    new_rank = band_order.get(row['newband'], 0) 
     state = row['state']
     # Upgrade if moved to higher-ranked band
     if state == 53 and new_rank > curr_rank:
@@ -332,7 +314,7 @@ def is_sm(row):
         return 'SM'
     else:
         return 'FM'
-   
+    
 df_active_june['sm_flag'] = df_active_june.apply(is_sm, axis=1)
 df_active_may['sm_flag'] = df_active_may.apply(is_sm, axis=1)
 
@@ -358,7 +340,6 @@ df_active_may['sm_ug_flag'] = df_active_may.apply(is_sm_ug, axis=1)
 ##################################################################################################################################
 
 # Add a hyperlink that opens `inactive.py` in a new tab
-import streamlit as st
 
 def active():
     st.markdown("<a href='?view=inactive' target='_blank'><button>Open Inactive</button></a>",unsafe_allow_html=True)
@@ -373,7 +354,7 @@ if view == "inactive":
 else:
     active()
 
-   
+    
 import streamlit as st
 band_options = ['Overall', 'MLA-5K', 'MLA-5K-R', 'MLA-8K', 'MLA-8K-R', 'MLA-10K', 'MLA-10K-R']
 emi_options = ['Overall', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12]
@@ -383,7 +364,7 @@ emi_list = []
 
 # selected_band = st.selectbox("🎯 Select Product Band", band_options)
 # selected_emi = st.selectbox("🎯 Select Product EMI Number", emi_options)
-# print(selected_band)
+# print(selected_band) 
 # print(selected_emi)
 
 import streamlit as st
@@ -427,7 +408,7 @@ else:
     emi_list = [selected_emi]
 
 
-# (Optional) Filter df_may for previous month if needed MAY DAY MAY DAY
+# (Optional) Filter df_may for previous month if needed MAY DAY MAY DAY 
 if (selected_band == 'Overall' and selected_emi == 'Overall'):
     df_may = df_active_may[df_active_may['due_month'] == previous_month].copy()
     band_list = ['MLA-5K', 'MLA-5K-R', 'MLA-8K', 'MLA-8K-R', 'MLA-10K', 'MLA-10K-R']
@@ -551,7 +532,7 @@ with st.expander("📦 View EMI Stack Chart"):
 ######################################### MTD TRIALS #######################################################################
 ############################################################################################################################
 
-import calendar
+import calendar 
 # Days in month
 days = list(range(1,32))  #dynamic
 # Define month references
@@ -572,7 +553,7 @@ closure_ratio_df = pd.DataFrame({
     4: [13.47, 10.19, 13.68, 10.67, 11.71, 10.90, 13.08],
     5: [19.98, 14.99, 20.27, 15.35, 17.08, 15.66, 18.79],
     6: [33.22, 27.18, 33.72, 27.07, 28.78, 27.49, 32.99],
-    7: [79.72, 80.77, 75.20, 76.41, 67.63, 75.20, 90.24]},
+    7: [79.72, 80.77, 75.20, 76.41, 67.63, 75.20, 90.24]}, 
     index=[ "MLA-10K-R","MLA-10K","MLA-8K-R","MLA-8K","MLA-5K-R","MLA-5K","MLA-3K"])
 
 # Convert percentages to decimals
@@ -591,14 +572,14 @@ for d in lm_days:
 for d in om_days:
     current_day_june = pd.Timestamp(f"{ongoing_month}-{d:02d}") #DateField
     # FIX: Compare day to day
-    june_active = df_june[df_june['due_day'] <= d]['cnt_loans'].sum()
+    june_active = df_june[df_june['due_day'] <= d]['cnt_loans'].sum() 
     june_closed = df_june[(df_june['closed_day'] <= d) & (df_june['closed_month']==pd.Period(ongoing_month, freq='M'))]['cnt_loans'].sum()     #DateField
     june_ratio = (june_closed / june_active) * 100 if june_active else 0    
     june_closure_mtd.append(june_ratio)
     # print("june active count : ", june_active)
     # print("june closed count : ", june_closed)
     # print("ratio :", june_ratio)
-   
+    
 for d in om_actual_days:
     ################################## PREDICTION ########################################
     # 🧠 PREDICTED MTD %
@@ -628,13 +609,13 @@ for d in om_actual_days:
             predicted_ratio = 0
             june_predicted_mtd.append(predicted_ratio)
             continue
-           
+            
         predicted_matrix = lineup_matrix[[selected_emi]] * ratio_df[[selected_emi]]
         predicted_mtd_count = predicted_matrix.values.sum()
         total_lineup = lineup_matrix[[selected_emi]].values.sum()
         predicted_closure_matrix_daywise[d] = predicted_matrix.copy()
 
-   
+    
     elif selected_band != 'Overall' and selected_emi == 'Overall':
         if selected_band not in lineup_matrix.index:
             predicted_ratio = 0
@@ -645,13 +626,13 @@ for d in om_actual_days:
         total_lineup = lineup_matrix.loc[[selected_band]].values.sum()
         predicted_closure_matrix_daywise[d] = predicted_matrix.copy()
 
-   
+    
     else:
         if selected_band not in lineup_matrix.index or selected_emi not in lineup_matrix.columns:
             predicted_ratio = 0
             june_predicted_mtd.append(predicted_ratio)
             continue
-           
+            
         val = lineup_matrix.at[selected_band, selected_emi] * ratio_df.at[selected_band, selected_emi]
         predicted_mtd_count = val
         total_lineup = lineup_matrix.at[selected_band, selected_emi]
@@ -680,7 +661,7 @@ fig_dual_axis = make_subplots(specs=[[{"secondary_y": True}]])
 fig_dual_axis.add_trace(go.Scatter(
     x=days, y=daily_emi_may,  # 🔴 May - Cumulative Line
     name=f'{lm_name} EMI Line up',
-    mode='lines+markers',
+    mode='lines+markers', 
     fill='tozeroy',
     line=dict(color='red', dash='dash')), secondary_y=False)
 fig_dual_axis.add_trace(go.Scatter(
@@ -706,13 +687,13 @@ fig_dual_axis.add_trace(go.Scatter(
     line=dict(color='green')
 ), secondary_y=True)
 
-# Predicted curve
+# Predicted curve 
 fig_dual_axis.add_trace(go.Scatter(
     x=om_actual_days,  # e.g., [1, 2, 3, ..., 31]
     y=june_predicted_mtd,  # 🔮 Predicted MTD % (already computed above)
     name='Predicted MTD Closure %',
     mode='lines+markers',
-    line=dict(color='#9467bd')  #
+    line=dict(color='#9467bd')  # 
 ), secondary_y=True)
 
 # --- Layout Settings ---
@@ -785,7 +766,7 @@ def get_confirmation_data(days, df, month_str):
             # For safety, maybe skip or initialize with zeros
             print(f"Warning: Closure matrix for day {d-1} missing!")
             continue
-       
+        
         lineup_matrix = predicted_closure_matrix_daywise[d]
 
         # Ensure ratio_aligned is aligned to lineup_matrix
@@ -852,7 +833,7 @@ fig_conf = make_subplots(specs=[[{"secondary_y": True}]])
 fig_conf.add_trace(go.Scatter(
     x=lm_days, y=may_closures,
     name=f"{lm_name}-Closures",
-    mode='lines+markers',
+    mode='lines+markers', 
     fill='tozeroy',
     line=dict(color='red', dash='dash'),
     text=[str(int(x)) if day in [1, 5, 10, 15, 20, 25, 30] else "" for day, x in zip(days_may, may_closures)],
@@ -918,7 +899,7 @@ st.plotly_chart(fig_conf, use_container_width=True)
 
 ############################################## TARGETABLE BASE - OUTFLOW ##################################
 
-# --- Movement Classification ---
+# --- Movement Classification --- 
 FPL_band_list = ["MLA-3K","MLA-5K","MLA-5K-R","MLA-8K", "MLA-8K-R","MLA-10K","MLA-10K-R"]
 
 def classify(row):
@@ -952,7 +933,7 @@ def movement_mtd(days,df, movement):
     curve = []
     for d in days:
         till_day = df[df['day'] <= d]
-        total = till_day[till_day['state'] == 53]['cnt_loans'].sum() # conf count
+        total = till_day[till_day['state'] == 53]['cnt_loans'].sum() # conf count 
         move = till_day[(till_day['movement'] == movement) & (till_day['state'] == 53)]['cnt_loans'].sum()
         perc = (move / total) * 100 if total else 0
         curve.append(perc)
@@ -984,15 +965,15 @@ june_moved_abs = movement_cumulative(om_days,df_june, 'Moved Out')
 ############################################## TARGETABLE BASE ANALYSIS - INFLOW ######################################################
 #######################################################################################################################################
 
-# TB mein kahan kahan se janta aayi !!!
+# TB mein kahan kahan se janta aayi !!! 
 # Case 1 : Band Upgrdae ( Uograde ) - state =53 and band upg
-# Case 2 : Band Downgrade ( Non-Upgrade ) - state = 53 and band down
+# Case 2 : Band Downgrade ( Non-Upgrade ) - state = 53 and band down 
 
 
 current_month = pd.Period(ongoing_month, freq='M')
 # Current and previous month
 pd.Period(ongoing_month, freq='M')
-previous_month = current_month - 1 # dynamic
+previous_month = current_month - 1 # dynamic 
 
 #################################### Prediction ###########################################
 
@@ -1002,13 +983,13 @@ june_conf_cumsum = []
 
 # Predicted In FPL list % and absolute numbers
 predicted_infpl_pct = []
-predicted_infpl_daywise=[]
+predicted_infpl_daywise=[] 
 
 # Predicted MoveOut of FPL list % and absolute numbers
 predicted_move_out_pct = []
 predicted_outfpl_daywise=[]
 
-# I want this in the form of band X is_sm_ug so that I can use it for further processing !!!!
+# I want this in the form of band X is_sm_ug so that I can use it for further processing !!!! 
 predicted_infpl_matrix_daywise = {}
 predicted_outfpl_matrix_daywise = {}
 predicted_confirmation_matrix_smug_daywise = {}
@@ -1105,8 +1086,8 @@ for d in om_actual_days:
             # For safety, maybe skip or initialize with zeros
             print(f"Warning: Closure matrix for day {d-1} missing!")
             continue
-   
-    # Get the line up matrix for IN and OUT
+    
+    # Get the line up matrix for IN and OUT 
     lineup_matrix = predicted_confirmation_matrix_daywise[d]        
     lineup_matrix_out = predicted_confirmation_matrix_daywise[d]    
 
@@ -1118,9 +1099,9 @@ for d in om_actual_days:
     ratio_aligned_out = ratio_aligned_out[[col for col in lineup_matrix_out.columns if col in ratio_aligned.columns]]
 
     predicted_mtd_count = 0
-    predicted_mtd_count_out =0
+    predicted_mtd_count_out =0 
     total_lineup = 0
-    total_lineup_out = 0
+    total_lineup_out = 0 
 
     # Apply EMI × Band Logic:
     if selected_band == 'Overall' and selected_emi == 'Overall':
@@ -1211,9 +1192,9 @@ fig_combined_abs.add_trace(go.Scatter(
     line=dict(color='#388E3C')),
     secondary_y=False)
 
-# Predicted Curves
+# Predicted Curves 
 fig_combined_abs.add_trace(go.Scatter(
-    x=om_actual_days,
+    x=om_actual_days, 
     y=predicted_infpl_pct,
     name=f"{om_name} Predicted In FPL %",
     mode='lines+markers',
@@ -1221,7 +1202,7 @@ fig_combined_abs.add_trace(go.Scatter(
 ), secondary_y=False)
 
 fig_combined_abs.add_trace(go.Scatter(
-    x=om_actual_days,
+    x=om_actual_days, 
     y=upgrade_pct_infpl_daywise,
     name=f"{om_name} Predicted Upgrade FPL %",
     mode='lines+markers',
@@ -1230,19 +1211,19 @@ fig_combined_abs.add_trace(go.Scatter(
 
 
 fig_combined_abs.add_trace(go.Scatter(
-    x=om_actual_days,
+    x=om_actual_days, 
     y=predicted_move_out_pct,
     name=f"{om_name} Predicted Move Out %",
     mode='lines+markers',
     line=dict(color='purple', dash='dash')
-),
+), 
 secondary_y=False)
 
 # Closure Counts (Secondary Y-axis)
 fig_combined_abs.add_trace(go.Scatter(
     x=lm_days, y=may_conf_cumsum,
     name=f"{lm_name} Confirmed (Abs)",
-    mode='lines+markers',
+    mode='lines+markers', 
     fill='tozeroy',
     line=dict(color='red', dash='dash')),
     secondary_y=True)
@@ -1277,19 +1258,19 @@ fig_combined_abs.update_layout(
 )
 # Y-Axis Customization
 fig_combined_abs.update_yaxes(
-    title_text="FPL %",
-    range=[0, 80],
-    secondary_y=False,
+    title_text="FPL %", 
+    range=[0, 80], 
+    secondary_y=False, 
     tickformat=".1f"
 )
 max_val = max(max(may_conf_cumsum), max(june_conf_cumsum))
 step = round(max_val / 5, -3)  # 10 steps, rounded to nearest 1000
 
 fig_combined_abs.update_yaxes(
-    title_text="Confirmation Count",
-    secondary_y=True,
-    rangemode="tozero",
-    showgrid=False,
+    title_text="Confirmation Count", 
+    secondary_y=True, 
+    rangemode="tozero", 
+    showgrid=False, 
     tickformat="~s",
     side="right",
     dtick=20000 # or another appropriate value like 2500/10000 based on your data scale
@@ -1316,9 +1297,9 @@ for d in lm_days:
     may_FPL_df = df_may[
         (df_may['closed_date'] <= cutoff) & ((df_may['newband'].isin([2250,1070,4341,1071,4425,1072,4457])) | (df_may['newband'].isna())) & (df_may['state']==53)]
     may_FPL_count=may_FPL_df['cnt_loans'].sum()
-   
-    ug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum() # UPGRADE COUNT
-    nug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum() # NON-UPGRADE COUNT
+    
+    ug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum() # UPGRADE COUNT 
+    nug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum() # NON-UPGRADE COUNT 
 
     may_FPL_cumsum.append(may_FPL_count)
     may_upgrade_pct.append((ug / may_FPL_count * 100) if may_FPL_count else 0)
@@ -1330,7 +1311,7 @@ for d in om_days:
     june_FPL_df = df_june[
         (df_june['closed_date'] <= cutoff) & ((df_june['newband'].isin([2250,1070,4341,1071,4425,1072,4457])) | (df_june['newband'].isna())) & (df_june['state']==53)]
     june_FPL_count=june_FPL_df['cnt_loans'].sum()
-   
+    
     ug = june_FPL_df[june_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum()
     nug = june_FPL_df[june_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum()
 
@@ -1345,7 +1326,7 @@ for d in om_days:
 current_month = pd.Period(ongoing_month, freq='M')
 # Current and previous month
 pd.Period(ongoing_month, freq='M')
-previous_month = current_month - 1 # dynamic
+previous_month = current_month - 1 # dynamic 
 
 # Filter logic for df_june (current month)
 if (selected_band == 'Overall' and selected_emi == 'Overall'):
@@ -1371,7 +1352,7 @@ else:
     emi_list = [selected_emi]
 
 
-# Filter df_may for previous month if needed MAY DAY MAY DAY
+# Filter df_may for previous month if needed MAY DAY MAY DAY 
 if (selected_band == 'Overall' and selected_emi == 'Overall'):
     df_may = df_active_may[(df_active_may['due_month'] == previous_month) & (df_active_may['state'] == 53)].copy()
     band_list = ['MLA-5K', 'MLA-5K-R', 'MLA-8K', 'MLA-8K-R', 'MLA-10K', 'MLA-10K-R']
@@ -1403,7 +1384,7 @@ for d in om_days:
     june_FPL_df = df_june[
         (df_june['closed_date'] <= cutoff) & ((df_june['newband'].isin([2250,1070,4341,1071,4425,1072,4457])) | (df_june['newband'].isna())) & (df_june['state']==53)]
     june_FPL_count=june_FPL_df['cnt_loans'].sum()
-   
+    
     ug = june_FPL_df[june_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum()
     nug = june_FPL_df[june_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum()
 
@@ -1418,9 +1399,9 @@ for d in lm_days:
     may_FPL_df = df_may[
         (df_may['closed_date'] <= cutoff) & ((df_may['newband'].isin([2250,1070,4341,1071,4425,1072,4457])) | (df_may['newband'].isna())) & (df_may['state']==53)]
     may_FPL_count=may_FPL_df['cnt_loans'].sum()
-   
-    ug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum() # UPGRADE COUNT
-    nug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum() # NON-UPGRADE COUNT
+    
+    ug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Upgrade']['cnt_loans'].sum() # UPGRADE COUNT 
+    nug = may_FPL_df[may_FPL_df['upgrade_flag'] == 'Non-Upgrade']['cnt_loans'].sum() # NON-UPGRADE COUNT 
 
     may_FPL_cumsum.append(may_FPL_count)
     may_upgrade_pct.append((ug / may_FPL_count * 100) if may_FPL_count else 0)
@@ -1438,7 +1419,7 @@ fig.add_trace(go.Scatter(x=lm_days, y=may_FPL_cumsum, name=f"{lm_name} In FPL", 
 fig.add_trace(go.Scatter(x=om_days, y=june_FPL_cumsum, name=f"{om_name} In FPL", fill='tozeroy',
                          line=dict(color='lightblue')), secondary_y=False)
 
-# Line chart – Upgrade & Non- Upgrade percentage % Month wise !!!!
+# Line chart – Upgrade & Non- Upgrade percentage % Month wise !!!! 
 fig.add_trace(go.Scatter(x=lm_days, y=may_upgrade_pct, name=f"{lm_name} Upgrade %",
                          mode='lines+markers', line=dict(color='orange', dash='dot')), secondary_y=True)
 fig.add_trace(go.Scatter(x=lm_days, y=may_nug_pct, name=f"{lm_name} Non-Upgrade %",
@@ -1484,7 +1465,7 @@ st.plotly_chart(fig, use_container_width=True)
 ########################################## DISBURSAL STAGE #############################################################################
 ########################################################################################################################################
 
-import calendar
+import calendar 
 # Lists to store data
 may_FPL_abs,june_FPL_abs = [],[]
 may_disb_pct,june_disb_pct = [],[]
@@ -1502,14 +1483,14 @@ for d in lm_days:
     may_disbursed_df = df_may[
         (df_may['disb_next_month'] == last_month) &  #DateField
         (df_may['closed_month'] == last_month) &  #DateField
-        (df_may['disb_next_date'] <= cutoff_may) &
+        (df_may['disb_next_date'] <= cutoff_may) & 
         # ((df_may['newband'].isin([2250,1070,4341,1071,4425,1072,4457])) | (df_may['newband'].isna())) & (df_may['state']==53) &
         (df_may['product_next'].isin(band_list))]
-   
+    
     may_disbursed=may_disbursed_df['cnt_loans'].sum()
     print("may DISBURSED count :::",may_disbursed)
     may_disb_pct.append((may_disbursed / may_FPL_count) * 100 )
-   
+    
 for d in om_days:
     # ------------------ JUNE ------------------
     disb_cutoff_june = pd.Timestamp(f"{ongoing_month}-{d:02d}") #DateField
@@ -1524,7 +1505,7 @@ for d in om_days:
         (df_june['closed_month'] == ongoing_month) & #DateField
         (df_june['disb_next_date'] <= disb_cutoff_june) &
         (df_june['product_next'].isin(band_list)) ]
-   
+    
     june_disbursed = june_disbursed_df['cnt_loans'].sum()
     # print(june_disbursed)
     june_disb_pct.append((june_disbursed / june_FPL_count) * 100)
@@ -1665,7 +1646,7 @@ def get_disbursal_curves(days,df, month_str, sm_flag, upgrade_flag):
     for d in days:
         cutoff = pd.Timestamp(f"{month_str}-{d:02d}")
         # Filter for relevant FPL products
-        valid_products = ['MLA-3K', 'MLA-5K', 'MLA-8K', 'MLA-10K',
+        valid_products = ['MLA-3K', 'MLA-5K', 'MLA-8K', 'MLA-10K', 
                           'MLA-5K-R', 'MLA-8K-R', 'MLA-10K-R']
         # Cumulative count in FPLP till date (filtered by SM/FM + Upgrade/Non-Upgrade)
         FPL_mask = (
@@ -1684,7 +1665,7 @@ def get_disbursal_curves(days,df, month_str, sm_flag, upgrade_flag):
             (df['disb_next_date'] <= cutoff) &
             (df['product_next'].isin(band_list)) &
             (df['sm_flag'] == sm_flag) &
-            (df['upgrade_flag'] == upgrade_flag) &
+            (df['upgrade_flag'] == upgrade_flag) & 
             (df['state']==53)
         )
         disbursed = df.loc[disb_mask, 'cnt_loans'].sum()
@@ -1745,9 +1726,4 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_layout(title="FM – Non-Upgrade Disbursal %", height=400, plot_bgcolor='white')
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
-
         st.plotly_chart(fig4, use_container_width=True)
-
-
-
-
