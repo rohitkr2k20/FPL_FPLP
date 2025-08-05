@@ -17,6 +17,12 @@ import os
 # ✅ Access from secrets
 aws_config = st.secrets["aws"]
 
+# ✅ Extract values
+aws_region = aws_config["region_name"]
+aws_access_key = aws_config["aws_access_key_id"]
+aws_secret_key = aws_config["aws_secret_access_key"]
+aws_session_token = aws_config["aws_session_token"]
+
 # ✅ Create boto3 session
 session = boto3.Session(
     aws_access_key_id=aws_config["aws_access_key_id"],
@@ -1739,6 +1745,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
