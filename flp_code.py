@@ -32,8 +32,8 @@ def load_data(query):
         # Create an Athena client
         athena_client = boto3.client(
             "athena",
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
             region_name=aws_region,
             aws_session_token=aws_session_token
         )
@@ -73,8 +73,8 @@ def load_data(query):
         # Fetch the result from S3 once the query is finished
         s3_client = boto3.client(
             "s3",
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
             region_name=aws_region,
             aws_session_token=aws_session_token
         )
@@ -1727,3 +1727,4 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
