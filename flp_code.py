@@ -30,8 +30,8 @@ print("Loaded AWS region:", aws_region)
 
 # ✅ Create boto3 session
 session = boto3.Session(
-aws_access_key=aws_access_key,
-aws_secret_key=aws_secret_key,
+aws_access_key_id=aws_access_key,
+aws_secret_access_key=aws_secret_key,
 aws_session_token=aws_session_token,
 region_name=aws_region
 )
@@ -1750,6 +1750,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
