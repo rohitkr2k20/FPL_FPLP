@@ -129,13 +129,39 @@ def load_data(query):
 ################################################ INPUTS REQUIRED ############################################################
 #############################################################################################################################
 
-ongoing_month="2025-08"
-last_month="2025-07"
-lm_name = "July-25"
-om_name = "Aug-25"
-om_days=list(range(1,5)) # 1 MORE THAN THE TILL DATE 
-om_actual_days= list(range(1,31))
-lm_days = list(range(1,32)) # 1 MORE THAN THE COUNT OF DAYS IN THE LAST MONTH 
+# ongoing_month="2025-08"
+# last_month="2025-07"
+# lm_name = "July-25"
+# om_name = "Aug-25"
+# om_days=list(range(1,5)) # 1 MORE THAN THE TILL DATE 
+# om_actual_days= list(range(1,31))
+# lm_days = list(range(1,32)) # 1 MORE THAN THE COUNT OF DAYS IN THE LAST MONTH 
+
+# Get today's date
+today = datetime.today()
+
+# Ongoing month = current month
+ongoing_month = today.strftime("%Y-%m")
+
+# Last month = first day of this month - 1 day → gives last month's date
+first_day_this_month = today.replace(day=1)
+last_month_date = first_day_this_month - timedelta(days=1)
+last_month = last_month_date.strftime("%Y-%m")
+
+# Friendly names
+lm_name = last_month_date.strftime("%b-%y")   # e.g., "Jul-25"
+om_name = today.strftime("%b-%y")             # e.g., "Aug-25"
+
+# Day ranges
+# om_days: 1 to (today + 1)
+om_days = list(range(1, today.day + 1 ))
+
+# om_actual_days: 1 to total days in ongoing month
+om_days_in_month = calendar.monthrange(today.year, today.month)[1]
+om_actual_days = list(range(1, om_days_in_month ))
+
+lm_days_in_month = calendar.monthrange(last_month_date.year, last_month_date.month)[1]
+lm_days = list(range(1, lm_days_in_month + 1 ))
 
 
 ###########################################################################################################################
@@ -1745,6 +1771,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
