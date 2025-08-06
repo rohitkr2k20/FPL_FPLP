@@ -10,7 +10,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
-# Assuming `df_inactive` is your dataframe
+import calendar
+
 
 st.set_page_config(page_title="FPL/FPLP Inactive", layout="wide")
 st.header("📊 Inactive Base Analysis")
