@@ -6,5 +6,5 @@ plotly
 python-dateutil
 python-dotenv
 streamlit-pills
-calendar
+
 
