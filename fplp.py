@@ -47,8 +47,8 @@ def load_data(query):
         # Create an Athena client
         athena_client = boto3.client(
             "athena",
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
             region_name=aws_region,
             aws_session_token=aws_session_token
         )
