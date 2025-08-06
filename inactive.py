@@ -12,7 +12,6 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
 import calendar
 
-
 st.set_page_config(page_title="FPL/FPLP Inactive", layout="wide")
 st.header("📊 Inactive Base Analysis")
 
@@ -27,6 +26,24 @@ last_month = last_month_date.strftime("%Y-%m")
 ################################################################################################################
 ################################## ----- Setting up the Database Connection ----- ##############################
 ################################################################################################################
+
+# ✅ Access from secrets
+aws_config = st.secrets["aws"]
+
+# ✅ Extract values
+aws_region = aws_config["region_name"]
+aws_access_key = aws_config["aws_access_key_id"]
+aws_secret_key = aws_config["aws_secret_access_key"]
+aws_session_token = aws_config["aws_session_token"]
+
+# ✅ Create boto3 session
+session = boto3.Session(
+    aws_access_key_id=aws_config["aws_access_key_id"],
+    aws_secret_access_key=aws_config["aws_secret_access_key"],
+    aws_session_token=aws_config["aws_session_token"],
+    region_name=aws_config["region_name"]
+)
+
 @st.cache_data
 def load_data(query):
     try:
