@@ -387,7 +387,11 @@ df_active_may['sm_ug_flag'] = df_active_may.apply(is_sm_ug, axis=1)
 # Add a hyperlink that opens `inactive.py` in a new tab
 
 def active():
-    st.markdown("<a href='?view=inactive' target='_blank'><button>Open Inactive</button></a>",unsafe_allow_html=True)
+    st.markdown(
+        "<a href='https://kb-fpl-fplp-inactive-analysis.streamlit.app/' target='_blank'>"
+        "<button>Open Inactive</button></a>",
+        unsafe_allow_html=True
+    )
 
 def inactive():
     st.title("Inactive View")
@@ -1772,6 +1776,7 @@ with st.expander("📊 View All SM/FM × Upgrade/Non-Upgrade Disbursals", expand
         fig4.update_yaxes(title_text="FPL Count", secondary_y=False)
         fig4.update_yaxes(title_text="Disb %", secondary_y=True, range=[0, 110])
         st.plotly_chart(fig4, use_container_width=True)
+
 
 
 
