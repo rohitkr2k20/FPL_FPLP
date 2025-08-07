@@ -387,7 +387,8 @@ import streamlit as st
 
 def active():
     st.markdown(
-        "<a href='?view=inactive' target='_blank'><button>Open Inactive</button></a>",
+        "<a href='https://kb-fpl-fplp-inactive-analysis.streamlit.app/' target='_blank'>"
+        "<button>Open Inactive</button></a>",
         unsafe_allow_html=True
     )
 
